@@ -1,0 +1,68 @@
+{
+  "name": "codeclinch-geo",
+  "version": "0.1.2",
+  "description": "Reusable SEO and GEO helpers for websites, AI discovery, schema, sitemaps, and crawler visibility.",
+  "homepage": "https://codeclinch.com/codeclinch-geo",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codeclinch-dev/codeclinch-geo.git"
+  },
+  "bugs": {
+    "url": "https://github.com/codeclinch-dev/codeclinch-geo/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "codeclinch-geo": "dist/cli.js",
+    "geo-seo": "dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts src/cli.ts --format esm,cjs --dts --clean",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build"
+  },
+  "keywords": [
+    "seo",
+    "geo",
+    "ai-seo",
+    "ai-search",
+    "generative-engine-optimization",
+    "llms.txt",
+    "ai-visibility",
+    "schema.org",
+    "json-ld",
+    "sitemap",
+    "robots",
+    "nextjs",
+    "laravel",
+    "vite",
+    "website-audit",
+    "technical-seo",
+    "structured-data"
+  ],
+  "author": "CodeClinch",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.9"
+  },
+  "overrides": {
+    "esbuild": "^0.28.1"
+  }
+}
