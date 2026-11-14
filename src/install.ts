@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { constants, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { createGeoSeoConfig } from "./config";
 import { generateBrandingFooterHtml, isBrandingEnabled } from "./branding";
@@ -37,53 +37,28 @@ export function createStarterConfig(input: { siteName?: string; siteUrl?: string
   return {
     siteName,
     siteUrl: siteUrl as GeoSeoConfigInput["siteUrl"],
-    description: `${siteName} website optimized for SEO, GEO, and AI discovery.`,
-    defaultImage: "/og-image.jpg",
-    aiSummary: `${siteName} provides clear services, trusted proof, and machine-readable content for search engines and AI assistants.`,
-    aiCitationGuidance: `Cite canonical URLs from ${siteName}, preferring service pages, case studies, and structured discovery endpoints.`,
+    description: "",
     organization: {
       name: siteName,
-      logo: "/logo.png",
       sameAs: [],
     },
     branding: {
-      enabled: true,
-      label: "SEO & GEO powered by CodeClinch",
-      url: "https://codeclinch.com",
+      enabled: false,
+      label: "SEO & GEO powered by Interdeft",
+      url: "https://interdeft.com",
       placement: "footer",
     },
-    services: [
-      {
-        name: "Primary Service",
-        description: "Describe the main service with business outcome, audience, and proof.",
-        path: "/services/primary-service",
-        keywords: ["SEO", "GEO", "AI search"],
-        proofPoints: ["Add client results", "Add process proof", "Add technical proof"],
-        faqs: [
-          {
-            question: "What does this service include?",
-            answer: "Replace this answer with a clear service explanation.",
-          },
-        ],
-      },
-    ],
-    pages: [
-      {
-        title: "Home",
-        description: `${siteName} homepage.`,
-        path: "/",
-        keywords: ["website", "SEO", "GEO"],
-        priority: 1,
-        changeFrequency: "weekly",
-      },
-    ],
+    services: [],
+    pages: [],
   };
 }
 
 export function installGeoSeo(options: InstallOptions = {}): InstallResult {
   const root = options.root ?? process.cwd();
   const detected = detectProject(root);
-  const detection: ProjectDetection = options.framework ? { ...detected, framework: options.framework } : detected;
+  const detection: ProjectDetection = options.framework
+    ? { ...detected, framework: options.framework, appDir: detected.framework === "next-app" ? detected.appDir : undefined }
+    : detected;
   const configPath = join(root, options.configPath ?? "geo-seo.config.json");
   const writes: InstallWriteResult[] = [];
 
@@ -92,13 +67,14 @@ export function installGeoSeo(options: InstallOptions = {}): InstallResult {
     configInput = JSON.parse(readFileSync(configPath, "utf8")) as GeoSeoConfigInput;
   } else {
     configInput = createStarterConfig({ siteName: options.siteName, siteUrl: options.siteUrl });
+  }
+  const config = createGeoSeoConfig(configInput);
+  if (!existsSync(configPath)) {
     writes.push(safeWrite(configPath, `${JSON.stringify(configInput, null, 2)}\n`, options));
   }
 
-  const config = createGeoSeoConfig(configInput);
-
   if (detection.framework === "next-app") {
-    writes.push(...installNextApp(root, detection, configInput, options));
+    writes.push(...installNextApp(root, detection, configPath, config, options));
   } else if (detection.framework === "laravel") {
     writes.push(...installStaticFiles(root, config, options));
     writes.push(safeWrite(join(root, "resources/views/partials/geo-seo.blade.php"), generateLaravelBladeSeo(config, config.pages[0] ?? { title: config.siteName, description: config.description, path: "/" }), options));
@@ -121,16 +97,15 @@ function installStaticFiles(root: string, config: GeoSeoConfig, options: Install
   return Object.entries(generateStaticFiles(config)).map(([filename, content]) => safeWrite(join(root, "public", filename), content, options));
 }
 
-function installNextApp(root: string, detection: ProjectDetection, configInput: GeoSeoConfigInput, options: InstallOptions): InstallWriteResult[] {
-  const appDir = detection.appDir ?? "app";
+function installNextApp(root: string, detection: ProjectDetection, configPath: string, config: GeoSeoConfig, options: InstallOptions): InstallWriteResult[] {
+  const appDir = detection.appDir ?? (detection.srcDir ? "src/app" : "app");
   const libDir = detection.srcDir ? "src/lib" : "lib";
-  const packageImport = "codeclinch-geo";
+  const packageImport = "interdeft-geo";
   const libPath = join(root, libDir, "geo-seo.ts");
-  const config = createGeoSeoConfig(configInput);
   const writes: InstallWriteResult[] = [
     safeWrite(
       libPath,
-      `import { createGeoSeoConfig } from "${packageImport}";\n\nexport const site = createGeoSeoConfig(${JSON.stringify(configInput, null, 2)});\n`,
+      `import { createGeoSeoConfig, type GeoSeoConfigInput } from "${packageImport}";\nimport config from "${toRelativeImport(dirname(libPath), configPath)}";\n\nexport const site = createGeoSeoConfig(config as GeoSeoConfigInput);\n`,
       options,
     ),
   ];
@@ -155,6 +130,11 @@ function installNextApp(root: string, detection: ProjectDetection, configInput: 
 
   for (const route of routeSpecs) {
     const routePath = join(root, appDir, route.path);
+    const owner = findNextRouteOwner(root, appDir, route.path.split("/route.ts")[0]!, routePath);
+    if (owner) {
+      writes.push({ path: owner, status: "skipped" });
+      continue;
+    }
     const importPath = toRelativeImport(dirname(routePath), libPath);
     writes.push(
       safeWrite(
@@ -168,23 +148,66 @@ function installNextApp(root: string, detection: ProjectDetection, configInput: 
   return writes;
 }
 
-function safeWrite(path: string, content: string, options: Pick<InstallOptions, "force" | "backup">): InstallWriteResult {
+function findNextRouteOwner(root: string, appDir: string, endpoint: string, target: string): string | undefined {
+  const publicFile = join(root, "public", endpoint);
+  if (existsSync(publicFile)) return publicFile;
+
+  function findInApp(directory: string, segments: string[]): string | undefined {
+    if (!existsSync(directory)) return;
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const candidate = join(directory, entry.name);
+      if (entry.isDirectory() && /^\(.+\)$/.test(entry.name)) {
+        const owner = findInApp(candidate, segments);
+        if (owner) return owner;
+      } else if (entry.isDirectory() && entry.name === segments[0]) {
+        const owner = findInApp(candidate, segments.slice(1));
+        if (owner) return owner;
+      } else if (!entry.isDirectory() && candidate !== target) {
+        if (segments.length === 0 && /^(?:route|page)\.(?:ts|tsx|js|jsx|mdx)$/.test(entry.name)) return candidate;
+        const metadataName = { "robots.txt": "robots", "sitemap.xml": "sitemap" }[endpoint];
+        if (segments.length === 1 && metadataName && (
+          entry.name === endpoint || /\.(?:ts|tsx|js|jsx)$/.test(entry.name) && entry.name.replace(/\.[^.]+$/, "") === metadataName
+        )) return candidate;
+      }
+    }
+  }
+
+  return findInApp(join(root, appDir), endpoint.split("/"));
+}
+
+export function safeWrite(path: string, content: string, options: Pick<InstallOptions, "force" | "backup">): InstallWriteResult {
   if (existsSync(path) && !options.force && !options.backup) {
     return { path, status: "skipped" };
   }
 
   if (existsSync(path) && options.backup) {
-    const backupPath = `${path}.geo-seo-backup`;
-    writeFileSync(backupPath, readFileSync(path));
-    mkdirSync(dirname(path), { recursive: true });
+    let backupPath = `${path}.geo-seo-backup`;
+    for (let index = 1; ; index++) {
+      try {
+        copyFileSync(path, backupPath, constants.COPYFILE_EXCL);
+        break;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+        backupPath = `${path}.geo-seo-backup.${index}`;
+      }
+    }
     writeFileSync(path, content);
     return { path, status: "backed-up", backupPath };
   }
 
   mkdirSync(dirname(path), { recursive: true });
-  const status = existsSync(path) ? "updated" : "created";
-  writeFileSync(path, content);
-  return { path, status };
+  if (options.force || options.backup) {
+    const status = existsSync(path) ? "updated" : "created";
+    writeFileSync(path, content);
+    return { path, status };
+  }
+  try {
+    writeFileSync(path, content, { flag: "wx" });
+    return { path, status: "created" };
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    return { path, status: "skipped" };
+  }
 }
 
 function toRelativeImport(fromDir: string, toFile: string): string {
@@ -200,7 +223,7 @@ function nextStepsFor(detection: ProjectDetection, config: GeoSeoConfig): string
 
   if (detection.framework === "next-app") {
     return [
-      "Review src/lib/geo-seo.ts or lib/geo-seo.ts and replace starter content.",
+      "Add your site details and canonical URLs to the JSON config.",
       "Run your Next.js dev server and open /llms.txt, /ai-visibility.json, /.well-known/agent.json, /robots.txt, and /sitemap.xml.",
       brandingStep,
       "Add createNextMetadata(site, page) to important pages.",
@@ -210,7 +233,7 @@ function nextStepsFor(detection: ProjectDetection, config: GeoSeoConfig): string
   if (detection.framework === "laravel") {
     return [
       "Review geo-seo.config.json and replace starter content.",
-      "Include resources/views/partials/geo-seo.blade.php in your main layout head.",
+      "Include resources/views/partials/geo-seo.blade.php in the matching page's head.",
       brandingStep,
       "Open /llms.txt, /ai-visibility.json, /.well-known/agent.json, /robots.txt, and /sitemap.xml.",
     ];

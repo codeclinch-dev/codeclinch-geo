@@ -1,5 +1,12 @@
 export type AbsoluteUrl = `http://${string}` | `https://${string}`;
 
+export interface RobotsOptions {
+  disallow?: string[];
+  allow?: string[];
+  userAgent?: string;
+  crawlerPolicies?: Partial<Record<"OAI-SearchBot" | "GPTBot" | "Claude-SearchBot" | "ClaudeBot" | "Claude-User" | "Google-Extended", "inherit" | "block">>;
+}
+
 export interface GeoSeoOrganization {
   name: string;
   logo?: string;
@@ -31,6 +38,8 @@ export interface GeoSeoPage {
   title: string;
   description: string;
   path?: string;
+  canonical?: string;
+  noIndex?: boolean;
   image?: string;
   keywords?: string[];
   lastModified?: string | Date;
@@ -62,6 +71,7 @@ export interface GeoSeoConfig {
   pages: GeoSeoPage[];
   aiSummary?: string;
   aiCitationGuidance?: string;
+  robots?: RobotsOptions;
 }
 
 export interface GeoSeoConfigInput {
@@ -77,11 +87,10 @@ export interface GeoSeoConfigInput {
   pages?: GeoSeoPage[];
   aiSummary?: string;
   aiCitationGuidance?: string;
+  robots?: RobotsOptions;
 }
 
-export interface MetadataInput extends GeoSeoPage {
-  noIndex?: boolean;
-}
+export type MetadataInput = GeoSeoPage;
 
 export interface GeneratedMetadata {
   title: string;

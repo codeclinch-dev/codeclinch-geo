@@ -10,10 +10,12 @@ export function createGeoSeoConfig(input: GeoSeoConfigInput): GeoSeoConfig {
     telephone: input.organization?.telephone,
     email: input.organization?.email,
   };
+  const legacyLabel = input.branding?.label === "SEO & GEO powered by CodeClinch";
+  const legacyUrl = input.branding?.url === "https://codeclinch.com";
   const branding = {
-    enabled: input.branding?.enabled ?? true,
-    label: input.branding?.label ?? "SEO & GEO powered by CodeClinch",
-    url: (input.branding?.url ?? "https://codeclinch.com") as GeoSeoConfig["branding"]["url"],
+    enabled: legacyLabel && legacyUrl ? false : input.branding?.enabled ?? false,
+    label: legacyLabel ? "SEO & GEO powered by Interdeft" : input.branding?.label ?? "SEO & GEO powered by Interdeft",
+    url: (legacyUrl ? "https://interdeft.com" : input.branding?.url ?? "https://interdeft.com") as GeoSeoConfig["branding"]["url"],
     placement: input.branding?.placement ?? "footer",
     sponsor: input.branding?.sponsor,
   };
@@ -31,5 +33,6 @@ export function createGeoSeoConfig(input: GeoSeoConfigInput): GeoSeoConfig {
     pages: input.pages ?? [],
     aiSummary: input.aiSummary,
     aiCitationGuidance: input.aiCitationGuidance,
+    robots: input.robots,
   };
 }

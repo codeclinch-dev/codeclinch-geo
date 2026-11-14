@@ -108,7 +108,7 @@ export function generateBreadcrumbSchema(config: GeoSeoConfig, items: Array<Pick
 }
 
 export function stringifyJsonLd(schema: JsonLd | JsonLd[]): string {
-  return JSON.stringify(schema, null, 2);
+  return JSON.stringify(schema, null, 2).replace(/</g, "\\u003c");
 }
 
 function removeUndefined<T extends Record<string, unknown>>(value: T): T {

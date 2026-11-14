@@ -17,10 +17,11 @@ export function generateBrandingHtml(config: GeoSeoConfig): string {
     return "";
   }
 
-  const label = escapeHtml(generateBrandingText(config));
-  const url = escapeHtml(config.branding.url);
+  const url = URL.canParse(config.branding.url) ? new URL(config.branding.url) : undefined;
+  if (!url || !["http:", "https:"].includes(url.protocol) || url.username || url.password) return "";
 
-  return `<a href="${url}" target="_blank" rel="noopener noreferrer" data-geo-seo-branding="codeclinch">${label}</a>`;
+  const label = escapeHtml(generateBrandingText(config));
+  return `<a href="${escapeHtml(url.href)}" target="_blank" rel="noopener noreferrer" data-geo-seo-branding="interdeft">${label}</a>`;
 }
 
 export function generateBrandingFooterHtml(config: GeoSeoConfig): string {

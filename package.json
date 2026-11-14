@@ -1,8 +1,8 @@
 {
-  "name": "codeclinch-geo",
-  "version": "0.1.2",
-  "description": "Reusable SEO and GEO helpers for websites, AI discovery, schema, sitemaps, and crawler visibility.",
-  "homepage": "https://codeclinch.com/codeclinch-geo",
+  "name": "interdeft-geo",
+  "version": "0.2.0",
+  "description": "Interdeft tools for technical SEO, structured data, website audits, and AI search discovery.",
+  "homepage": "https://interdeft.com",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/codeclinch-dev/codeclinch-geo.git"
@@ -15,14 +15,20 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "codeclinch-geo": "dist/cli.js",
-    "geo-seo": "dist/cli.js"
+    "interdeft-geo": "dist/cli.js",
+    "geo-seo": "dist/cli.js",
+    "codeclinch-geo": "dist/cli.js"
   },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     }
   },
   "files": [
@@ -33,7 +39,8 @@
     "build": "tsup src/index.ts src/cli.ts --format esm,cjs --dts --clean",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run typecheck && npm run test && npm run build"
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build",
+    "pack:wordpress": "sh scripts/package-wordpress.sh"
   },
   "keywords": [
     "seo",
@@ -54,7 +61,7 @@
     "technical-seo",
     "structured-data"
   ],
-  "author": "CodeClinch",
+  "author": "Interdeft",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.10.2",
@@ -64,5 +71,12 @@
   },
   "overrides": {
     "esbuild": "^0.28.1"
+  },
+  "engines": {
+    "node": ">=20.19"
+  },
+  "dependencies": {
+    "@xmldom/xmldom": "^0.9.12",
+    "parse5": "^7.3.0"
   }
 }

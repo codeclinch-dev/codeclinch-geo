@@ -20,8 +20,8 @@ export function detectProject(root = process.cwd()): ProjectDetection {
     ...asObject(packageJson?.devDependencies),
   };
 
-  const appDir = existsSync(join(root, "src/app")) ? "src/app" : existsSync(join(root, "app")) ? "app" : undefined;
-  const pagesDir = existsSync(join(root, "src/pages")) ? "src/pages" : existsSync(join(root, "pages")) ? "pages" : undefined;
+  const appDir = existsSync(join(root, "app")) ? "app" : existsSync(join(root, "src/app")) ? "src/app" : undefined;
+  const pagesDir = existsSync(join(root, "pages")) ? "pages" : existsSync(join(root, "src/pages")) ? "src/pages" : undefined;
   const srcDir = existsSync(join(root, "src")) ? "src" : undefined;
 
   if (existsSync(join(root, "pnpm-lock.yaml"))) reasons.push("Found pnpm-lock.yaml");

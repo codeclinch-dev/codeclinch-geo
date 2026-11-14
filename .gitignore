@@ -1,6 +1,8 @@
 node_modules/
 dist/
 coverage/
+wordpress-plugin/*.zip
+/interdeft-geo-*.tgz
 .DS_Store
 *.log
 .env

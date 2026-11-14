@@ -1,5 +1,5 @@
 import type { GeoSeoConfig } from "./types";
-import { absoluteUrl } from "./url";
+import { absoluteUrl, getDiscoverablePages } from "./url";
 
 export interface AiVisibilityJson {
   schemaVersion: "geo-seo/v1";
@@ -61,7 +61,7 @@ export function generateAiVisibilityJson(config: GeoSeoConfig): AiVisibilityJson
       proofPoints: service.proofPoints ?? [],
       faqs: service.faqs ?? [],
     })),
-    pages: config.pages.map((page) => ({
+    pages: getDiscoverablePages(config).map((page) => ({
       title: page.title,
       description: page.description,
       url: absoluteUrl(config, page.path),

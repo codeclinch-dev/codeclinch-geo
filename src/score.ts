@@ -1,4 +1,5 @@
 import type { GeoSeoConfig } from "./types";
+import { getDiscoverablePages } from "./url";
 
 export interface GeoSeoScoreItem {
   id: string;
@@ -18,17 +19,22 @@ export interface GeoSeoScore {
 }
 
 export function calculateGeoSeoScore(config: GeoSeoConfig): GeoSeoScore {
+  const services = config.services.filter((service) => service.path !== "/services/primary-service" || service.name !== "Primary Service");
+  const pages = getDiscoverablePages(config).filter((page) => page.description !== `${config.siteName} homepage.`);
+  const stockDescription = `${config.siteName} website optimized for SEO, GEO, and AI discovery.`;
+  const stockSummary = `${config.siteName} provides clear services, trusted proof, and machine-readable content for search engines and AI assistants.`;
+  const stockCitation = `Cite canonical URLs from ${config.siteName}, preferring service pages, case studies, and structured discovery endpoints.`;
   const items: GeoSeoScoreItem[] = [
-    item("site-description", "Site has a strong default description", Boolean(config.description && config.description.length >= 50), 10, "Use a specific 50+ character brand/service description."),
+    item("site-description", "Site description is configured", Boolean(config.description?.trim()) && config.description !== stockDescription, 10, "Describe what the site offers and whom it serves."),
     item("organization", "Organization details are configured", Boolean(config.organization.name), 8, "Add organization name, logo, contact, and sameAs profiles."),
-    item("organization-trust", "Organization trust signals are present", Boolean(config.organization.logo || config.organization.sameAs?.length || config.organization.email), 8, "Add logo, social profiles, and public contact details."),
-    item("services", "Service entities are defined", config.services.length > 0, 12, "Add at least one service with description, path, and keywords."),
-    item("service-keywords", "Services include GEO/SEO keywords", config.services.some((service) => service.keywords?.length), 10, "Add keywords to service definitions."),
-    item("service-proof", "Services include proof points or FAQs", config.services.some((service) => service.proofPoints?.length || service.faqs?.length), 10, "Add proof points and FAQs so AI answers can cite stronger evidence."),
-    item("pages", "Important pages are listed", config.pages.length > 0, 10, "Add important pages, case studies, blogs, and service pages."),
-    item("page-keywords", "Pages include keywords", config.pages.some((page) => page.keywords?.length), 8, "Add keywords to important pages."),
-    item("ai-summary", "AI summary is configured", Boolean(config.aiSummary), 12, "Add aiSummary with a concise machine-readable positioning statement."),
-    item("citation-guidance", "Citation guidance is configured", Boolean(config.aiCitationGuidance), 12, "Add aiCitationGuidance to guide AI systems toward canonical URLs."),
+    item("organization-trust", "Organization details include a logo, profile, or contact", Boolean(config.organization.logo && config.organization.logo !== "/logo.png" || config.organization.sameAs?.length || config.organization.email), 8, "Add a logo, public profiles, or public contact details."),
+    item("services", "Services have descriptions", services.some((service) => service.description.trim()), 12, "Describe at least one real service."),
+    item("service-keywords", "Services have dedicated URLs", services.some((service) => service.path), 10, "Link services to their dedicated pages."),
+    item("service-proof", "Services include proof points or FAQs", services.some((service) => service.proofPoints?.length || service.faqs?.length), 10, "Add evidence or useful FAQs."),
+    item("pages", "Public canonical pages are listed", pages.length > 0, 10, "List your important public pages."),
+    item("page-keywords", "Listed pages have descriptions", pages.some((page) => page.description.trim()), 8, "Describe the content of each listed page."),
+    item("ai-summary", "AI summary is configured", Boolean(config.aiSummary?.trim()) && config.aiSummary !== stockSummary, 12, "Add a concise, accurate summary."),
+    item("citation-guidance", "Citation guidance is configured", Boolean(config.aiCitationGuidance?.trim()) && config.aiCitationGuidance !== stockCitation, 12, "Identify useful sources and their canonical URLs."),
   ];
 
   const score = items.reduce((total, current) => total + current.points, 0);

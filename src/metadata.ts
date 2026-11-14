@@ -2,7 +2,7 @@ import type { GeneratedMetadata, GeoSeoConfig, MetadataInput } from "./types";
 import { absoluteUrl } from "./url";
 
 export function generateMetadata(config: GeoSeoConfig, page: MetadataInput): GeneratedMetadata {
-  const url = absoluteUrl(config, page.path);
+  const url = absoluteUrl(config, page.canonical ?? page.path);
   const image = page.image ?? config.defaultImage;
   const absoluteImage = image ? absoluteUrl(config, image) : undefined;
 

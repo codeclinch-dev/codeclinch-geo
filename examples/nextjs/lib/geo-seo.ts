@@ -1,15 +1,15 @@
 import { createGeoSeoConfig } from "../../../src";
 
 export const site = createGeoSeoConfig({
-  siteName: "CodeClinch",
-  siteUrl: "https://codeclinch.com",
+  siteName: "Interdeft",
+  siteUrl: "https://interdeft.com",
   description: "Web development, ecommerce, AI, SEO and GEO services.",
   defaultImage: "/og-image.jpg",
-  aiSummary: "CodeClinch builds websites, ecommerce platforms, delivery apps, and AI-ready search experiences.",
+  aiSummary: "Interdeft builds websites, ecommerce platforms, delivery apps, and AI-ready search experiences.",
   organization: {
-    name: "CodeClinch",
+    name: "Interdeft",
     logo: "/logo.png",
-    sameAs: ["https://www.linkedin.com/company/codeclinch"],
+    sameAs: ["https://www.linkedin.com/company/interdeft"],
   },
   services: [
     {

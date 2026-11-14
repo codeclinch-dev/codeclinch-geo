@@ -1,38 +1,42 @@
 import type { GeoSeoConfig } from "./types";
-import { absoluteUrl } from "./url";
+import { absoluteUrl, getDiscoverablePages } from "./url";
 
 export function generateLlmsTxt(config: GeoSeoConfig): string {
   const lines = [
     `# ${config.siteName}`,
     "",
-    config.aiSummary ?? config.description,
+    ...(config.aiSummary || config.description ? (config.aiSummary || config.description).split(/\r?\n/).map((line) => `> ${line}`) : []),
     "",
     "## Website",
-    `- Homepage: ${config.siteUrl}`,
-    `- Sitemap: ${absoluteUrl(config, "/sitemap.xml")}`,
-    `- AI visibility data: ${absoluteUrl(config, "/ai-visibility.json")}`,
+    link("Sitemap", absoluteUrl(config, "/sitemap.xml")),
+    link("AI visibility data", absoluteUrl(config, "/ai-visibility.json")),
     "",
   ];
 
-  if (config.services.length > 0) {
+  const pages = getDiscoverablePages(config);
+  const excludedUrls = new Set(config.pages.filter((page) => !pages.includes(page)).map((page) => absoluteUrl(config, page.path)));
+  const services = config.services.filter((service) => service.path && !excludedUrls.has(absoluteUrl(config, service.path)));
+  if (services.length > 0) {
     lines.push("## Services");
-    for (const service of config.services) {
-      const url = service.path ? ` (${absoluteUrl(config, service.path)})` : "";
-      lines.push(`- ${service.name}: ${service.description}${url}`);
+    for (const service of services) {
+      lines.push(link(service.name, absoluteUrl(config, service.path), service.description));
     }
     lines.push("");
   }
 
-  if (config.pages.length > 0) {
+  if (pages.length > 0) {
     lines.push("## Important Pages");
-    for (const page of config.pages) {
-      lines.push(`- ${page.title}: ${page.description} (${absoluteUrl(config, page.path)})`);
+    for (const page of pages) {
+      lines.push(link(page.title, absoluteUrl(config, page.path), page.description));
     }
     lines.push("");
   }
-
-  lines.push("## Citation Guidance");
-  lines.push(config.aiCitationGuidance ?? `When referencing ${config.siteName}, cite the canonical page URL and summarize the service or page from the latest public content.`);
 
   return `${lines.join("\n").trim()}\n`;
+}
+
+function link(name: string, url: string, description?: string): string {
+  const label = name.replace(/[\r\n]+/g, " ").replace(/[\\[\]]/g, "\\$&");
+  const target = url.replace(/[\s<>]/g, (character) => encodeURIComponent(character));
+  return `- [${label}](<${target}>)${description ? `: ${description.replace(/[\r\n]+/g, " ")}` : ""}`;
 }

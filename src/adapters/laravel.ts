@@ -9,6 +9,7 @@ export function generateLaravelBladeSeo(config: GeoSeoConfig, page: MetadataInpu
   const image = metadata.openGraph.images?.[0]?.url;
 
   return [
+    "@verbatim",
     `<title>${escapeHtml(metadata.title)}</title>`,
     `<meta name="description" content="${escapeHtml(metadata.description)}">`,
     `<link rel="canonical" href="${escapeHtml(metadata.alternates.canonical)}">`,
@@ -20,14 +21,17 @@ export function generateLaravelBladeSeo(config: GeoSeoConfig, page: MetadataInpu
     `<meta name="twitter:card" content="${metadata.twitter.card}">`,
     `<meta name="twitter:title" content="${escapeHtml(metadata.twitter.title)}">`,
     `<meta name="twitter:description" content="${escapeHtml(metadata.twitter.description)}">`,
-    `<script type="application/ld+json">${schema.replace(/</g, "\\u003c")}</script>`,
+    metadata.robots?.index === false ? '<meta name="robots" content="noindex, nofollow">' : undefined,
+    `<script type="application/ld+json">${schema.replace(/</g, "\\u003c").replace(/@/g, "\\u0040")}</script>`,
+    "@endverbatim",
   ]
     .filter(Boolean)
     .join("\n");
 }
 
 export function generateLaravelBrandingBlade(config: GeoSeoConfig): string {
-  return generateBrandingFooterHtml(config);
+  const html = generateBrandingFooterHtml(config);
+  return html ? `@verbatim\n${html.replace(/@/g, "&#64;")}@endverbatim\n` : "";
 }
 
 function escapeHtml(value: string): string {
@@ -35,6 +39,7 @@ function escapeHtml(value: string): string {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
+    .replace(/@/g, "&#64;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }

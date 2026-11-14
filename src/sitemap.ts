@@ -1,8 +1,8 @@
 import type { GeoSeoConfig, GeoSeoPage } from "./types";
-import { absoluteUrl, toIsoDate } from "./url";
+import { absoluteUrl, getDiscoverablePages, toIsoDate } from "./url";
 
 export function generateSitemapXml(config: GeoSeoConfig, pages: GeoSeoPage[] = config.pages): string {
-  const allPages = mergeHomePage(config, pages);
+  const allPages = getDiscoverablePages(config, mergeHomePage(config, pages));
   const urls = allPages.map((page) => {
     const lastmod = toIsoDate(page.lastModified);
     const changefreq = page.changeFrequency;
@@ -12,7 +12,7 @@ export function generateSitemapXml(config: GeoSeoConfig, pages: GeoSeoPage[] = c
       "  <url>",
       `    <loc>${escapeXml(absoluteUrl(config, page.path))}</loc>`,
       lastmod ? `    <lastmod>${lastmod}</lastmod>` : undefined,
-      changefreq ? `    <changefreq>${changefreq}</changefreq>` : undefined,
+      changefreq ? `    <changefreq>${escapeXml(changefreq)}</changefreq>` : undefined,
       priority ? `    <priority>${priority}</priority>` : undefined,
       "  </url>",
     ]
@@ -30,7 +30,7 @@ export function generateSitemapXml(config: GeoSeoConfig, pages: GeoSeoPage[] = c
 }
 
 function mergeHomePage(config: GeoSeoConfig, pages: GeoSeoPage[]): GeoSeoPage[] {
-  if (pages.some((page) => !page.path || page.path === "/")) {
+  if (pages.some((page) => absoluteUrl(config, page.path) === absoluteUrl(config, "/"))) {
     return pages;
   }
 

@@ -5,9 +5,9 @@ const AI_CRAWLERS = [
   ["ChatGPT-User", /chatgpt-user/i],
   ["OpenAI SearchBot", /oai-searchbot/i],
   ["ClaudeBot", /claudebot/i],
+  ["Claude-SearchBot", /claude-searchbot/i],
   ["Claude-User", /claude-user/i],
   ["PerplexityBot", /perplexitybot/i],
-  ["Google-Extended", /google-extended/i],
   ["Applebot", /applebot/i],
   ["CCBot", /ccbot/i],
   ["Bytespider", /bytespider/i],
@@ -37,7 +37,7 @@ export function createAiCrawlerVisit(input: { userAgent: string; path: string; t
     type: "ai_crawler_visit",
     crawlerName: match.crawlerName,
     userAgent: input.userAgent,
-    path: input.path,
+    path: input.path.split(/[?#]/, 1)[0] || "/",
     timestamp: input.timestamp instanceof Date ? input.timestamp.toISOString() : input.timestamp ?? new Date().toISOString(),
   };
 }

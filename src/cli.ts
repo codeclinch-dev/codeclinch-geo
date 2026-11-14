@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { auditWebsite } from "./audit";
 import { createGeoSeoConfig } from "./config";
-import { createStarterConfig, installGeoSeo } from "./install";
+import { createStarterConfig, installGeoSeo, safeWrite } from "./install";
 import { detectProject, recommendedInstallSummary, type ProjectFramework } from "./project";
 import { calculateGeoSeoScore } from "./score";
 import { generateStaticFiles } from "./adapters/static";
@@ -58,9 +58,10 @@ function initCommand(args: string[]): void {
   const siteName = flags["site-name"] ?? "Client Website";
   const siteUrl = flags["site-url"] ?? "https://example.com";
   const config = createStarterConfig({ siteName, siteUrl });
+  createGeoSeoConfig(config);
 
-  writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
-  console.log(`Created ${configPath}`);
+  const result = safeWrite(configPath, `${JSON.stringify(config, null, 2)}\n`, writeOptions(flags));
+  console.log(`${result.status.toUpperCase()} ${result.path}`);
 }
 
 function doctorCommand(args: string[]): void {
@@ -88,8 +89,7 @@ function installCommand(args: string[]): void {
     framework: flags.framework as ProjectFramework | undefined,
     siteName: flags["site-name"],
     siteUrl: flags["site-url"],
-    force: Boolean(flags.force),
-    backup: Boolean(flags.backup),
+    ...writeOptions(flags),
   });
 
   console.log(`Detected framework: ${result.detection.framework}`);
@@ -113,9 +113,8 @@ function generateCommand(args: string[]): void {
 
   for (const [filename, content] of Object.entries(files)) {
     const outputPath = join(outDir, filename);
-    mkdirSync(dirname(outputPath), { recursive: true });
-    writeFileSync(outputPath, content);
-    console.log(`Generated ${outputPath}`);
+    const result = safeWrite(outputPath, content, writeOptions(flags));
+    console.log(`${result.status.toUpperCase()} ${result.path}`);
   }
 }
 
@@ -124,7 +123,7 @@ function scoreCommand(args: string[]): void {
   const config = loadConfig(flags.config ?? DEFAULT_CONFIG);
   const score = calculateGeoSeoScore(config);
 
-  console.log(`GEO/SEO score: ${score.percentage}% (${score.grade})`);
+  console.log(`Setup checklist: ${score.percentage}% (${score.grade})`);
 
   for (const item of score.items) {
     const status = item.passed ? "PASS" : "FIX";
@@ -139,13 +138,17 @@ async function auditCommand(args: string[]): Promise<void> {
   const [url] = args.filter((arg) => !arg.startsWith("--"));
 
   if (!url) {
-    throw new Error("Missing URL. Example: codeclinch-geo audit https://example.com");
+    throw new Error("Missing URL. Example: interdeft-geo audit https://example.com");
   }
 
   const result = await auditWebsite(url);
 
   console.log(`Audit: ${result.url}`);
-  console.log(`Score: ${result.score}%`);
+  console.log(`Technical checks passed: ${result.score}%`);
+
+  for (const [name, endpoint] of Object.entries(result.endpoints)) {
+    console.log(`- ${name}: ${endpoint.valid ? "valid" : "unavailable or invalid"} (${endpoint.status ?? "no response"}) ${endpoint.url}`);
+  }
 
   if (result.issues.length === 0) {
     console.log("No issues found.");
@@ -178,18 +181,22 @@ function parseFlags(args: string[]): Record<string, string | undefined> {
   return flags;
 }
 
+function writeOptions(flags: Record<string, string | undefined>) {
+  return { force: flags.force === "true", backup: flags.backup === "true" };
+}
+
 function printHelp(): void {
-  console.log(`codeclinch-geo
+  console.log(`interdeft-geo
 
 Commands:
-  codeclinch-geo init --site-name "CodeClinch" --site-url https://codeclinch.com
-  codeclinch-geo doctor
-  codeclinch-geo install --site-name "CodeClinch" --site-url https://codeclinch.com
-  codeclinch-geo generate --config geo-seo.config.json --out public
-  codeclinch-geo score --config geo-seo.config.json
-  codeclinch-geo audit https://example.com
+  interdeft-geo init --site-name "Interdeft" --site-url https://interdeft.com
+  interdeft-geo doctor
+  interdeft-geo install --site-name "Interdeft" --site-url https://interdeft.com
+  interdeft-geo generate --config geo-seo.config.json --out public
+  interdeft-geo score --config geo-seo.config.json
+  interdeft-geo audit https://example.com
 
-Install flags:
+Write flags (init, install, generate):
   --framework next-app|next-pages|vite|laravel|static
   --force       overwrite existing files
   --backup      backup existing files before overwrite
